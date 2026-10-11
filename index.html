@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123c32">
+  <title>ProAmSa Rutas</title>
+  <style>
+    :root {
+      --verde: #176b4d;
+      --azul: #153b57;
+      --fondo: #f2f6f4;
+      --borde: #dce5e0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--fondo);
+      color: #19332a;
+      font-family: Arial, sans-serif;
+    }
+    header {
+      background: var(--azul);
+      color: white;
+      padding: 22px 18px;
+      border-bottom: 5px solid #79bc55;
+    }
+    header h1 { margin: 0 0 6px; font-size: 25px; }
+    header p { margin: 0; font-size: 14px; }
+    main { max-width: 850px; margin: auto; padding: 18px; }
+    .panel {
+      background: white;
+      border: 1px solid var(--borde);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    h2 { font-size: 19px; margin: 0 0 15px; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .stat {
+      background: #f5faf7;
+      border: 1px solid var(--borde);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .stat strong { display: block; font-size: 26px; color: var(--verde); }
+    .stat span { font-size: 13px; }
+    label { display: block; font-weight: bold; font-size: 14px; margin: 12px 0 6px; }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    input, select { border: 1px solid #b9c9c0; background: white; }
+    button {
+      border: 0;
+      background: var(--verde);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 12px;
+      min-height: 46px;
+    }
+    button.secondary { background: white; color: var(--azul); border: 1px solid var(--azul); }
+    .stop {
+      border: 1px solid var(--borde);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 10px;
+      overflow-wrap: anywhere;
+    }
+    .stop h3 { margin: 0 0 6px; font-size: 16px; }
+    .muted { color: #62756b; font-size: 13px; }
+    .status { color: var(--verde); font-weight: bold; font-size: 13px; }
+    footer { text-align: center; color: #62756b; padding: 15px; font-size: 12px; }
+    @media (min-width: 560px) {
+      .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .formgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>ProAmSa Rutas</h1>
+    <p>Gestión operativa de recolecciones · Yopal, Casanare</p>
+  </header>
+  <main>
+    <section class="panel">
+      <h2>Resumen de la ruta</h2>
+      <div class="stats">
+        <div class="stat"><strong id="total">0</strong><span>Paradas</span></div>
+        <div class="stat"><strong id="pendientes">0</strong><span>Pendientes</span></div>
+        <div class="stat"><strong id="visitas">0</strong><span>Visitas registradas</span></div>
+        <div class="stat"><strong id="kilos">0</strong><span>Kg recolectados</span></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Crear parada de prueba</h2>
+      <p class="muted">Esta primera versión es una demostración local. Los datos no se envían a un servidor.</p>
+      <form id="formulario">
+        <div class="formgrid">
+          <div>
+            <label for="cliente">Nombre del cliente *</label>
+            <input id="cliente" required placeholder="Nombre o razón social">
+          </div>
+          <div>
+            <label for="direccion">Dirección *</label>
+            <input id="direccion" required placeholder="Dirección de recolección">
+          </div>
+          <div>
+            <label for="residuo">Tipo de residuo</label>
+            <select id="residuo">
+              <option>Biosanitario</option>
+              <option>Cortopunzante</option>
+              <option>Anatomopatológico</option>
+              <option>Fármacos</option>
+              <option>Químicos</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div>
+            <label for="peso">Kilogramos recolectados</label>
+            <input id="peso" type="number" min="0" step="0.01" value="0">
+          </div>
+        </div>
+        <button type="submit">Agregar parada</button>
+      </form>
+      <p id="mensaje" class="muted" aria-live="polite"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Paradas de la ruta</h2>
+      <div id="lista"><p class="muted">Todavía no hay paradas.</p></div>
+    </section>
+    <footer>ProAmSa sas · Prototipo inicial · No usar todavía como registro oficial</footer>
+  </main>
+  <script>
+    const paradas = [];
+    const $ = id => document.getElementById(id);
+
+    function actualizar() {
+      $('total').textContent = paradas.length;
+      $('pendientes').textContent = paradas.filter(p => !p.visitada).length;
+      $('visitas').textContent = paradas.filter(p => p.visitada).length;
+      $('kilos').textContent = paradas.reduce((s, p) => s + (p.visitada ? p.kilos : 0), 0).toLocaleString('es-CO');
+
+      const lista = $('lista');
+      lista.replaceChildren();
+
+      if (!paradas.length) {
+        const p = document.createElement('p');
+        p.className = 'muted';
+        p.textContent = 'Todavía no hay paradas.';
+        lista.appendChild(p);
+        return;
+      }
+
+      paradas.forEach((p, i) => {
+        const tarjeta = document.createElement('article');
+        tarjeta.className = 'stop';
+
+        const titulo = document.createElement('h3');
+        titulo.textContent = (i + 1) + '. ' + p.cliente;
+
+        const direccion = document.createElement('p');
+        direccion.textContent = p.direccion;
+
+        const detalle = document.createElement('p');
+        detalle.className = 'muted';
+        detalle.textContent = p.residuo + ' · ' + (p.visitada ? p.kilos + ' kg registrados' : 'Sin visita registrada');
+
+        const estado = document.createElement('p');
+        estado.className = 'status';
+        estado.textContent = p.visitada ? 'Visita completada' : 'Pendiente';
+
+        tarjeta.append(titulo, direccion, detalle, estado);
+
+        if (!p.visitada) {
+          const boton = document.createElement('button');
+          boton.type = 'button';
+          boton.textContent = 'Registrar recolección';
+          boton.addEventListener('click', () => {
+            const peso = prompt('Ingresa los kilogramos recolectados. Escribe 0 si no hubo residuos.');
+            if (peso === null || peso.trim() === '') return;
+            const valor = Number(peso);
+            if (!Number.isFinite(valor) || valor < 0) {
+              alert('Ingresa un peso válido, igual o mayor que cero.');
+              return;
+            }
+            p.kilos = valor;
+            p.visitada = true;
+            actualizar();
+          });
+          tarjeta.appendChild(boton);
+        }
+
+        lista.appendChild(tarjeta);
+      });
+    }
+
+    $('formulario').addEventListener('submit', e => {
+      e.preventDefault();
+      const cliente = $('cliente').value.trim();
+      const direccion = $('direccion').value.trim();
+      const kilos = Number($('peso').value);
+
+      if (!cliente || !direccion || !Number.isFinite(kilos) || kilos < 0) {
+        $('mensaje').textContent = 'Revisa el nombre, la dirección y el peso.';
+        return;
+      }
+
+      paradas.push({
+        cliente,
+        direccion,
+        residuo: $('residuo').value,
+        kilos: 0,
+        visitada: false
+      });
+
+      $('formulario').reset();
+      $('peso').value = '0';
+      $('mensaje').textContent = 'Parada agregada correctamente.';
+      actualizar();
+    });
+
+    actualizar();
+  </script>
+</body>
+</html>
