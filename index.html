@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -30,7 +29,7 @@
     header h1 { margin: 0 0 6px; font-size: 25px; }
     header p { margin: 0; opacity: .9; }
     main {
-      width: min(520px, 92%);
+      width: min(1200px, 94%);
       margin: 28px auto;
     }
     .card {
@@ -51,16 +50,15 @@
       font-size: 16px;
     }
     button {
-      width: 100%;
       border: 0;
-      padding: 13px;
+      padding: 13px 16px;
       border-radius: 8px;
       background: var(--verde);
       color: white;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 17px;
+      margin-top: 12px;
     }
     button:disabled { opacity: .6; cursor: wait; }
     .secundario { background: var(--azul); }
@@ -73,10 +71,44 @@
       line-height: 1.5;
       font-size: 14px;
     }
-    .oculto { display: none; }
+    .oculto { display: none !important; }
     .dato { padding: 10px 0; border-bottom: 1px solid var(--borde); }
     .dato strong { display: block; color: var(--azul); margin-bottom: 4px; }
+    .acciones {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .acciones button { margin-top: 0; }
+    .tabla-contenedor {
+      overflow-x: auto;
+      width: 100%;
+      margin-top: 16px;
+    }
+    table {
+      width: 100%;
+      min-width: 950px;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 12px 10px;
+      text-align: left;
+      border-bottom: 1px solid var(--borde);
+      vertical-align: top;
+    }
+    th { background: #edf3f1; color: var(--azul); }
+    tbody tr:hover { background: #f7faf9; }
+    .contador { color: #52655d; font-size: 14px; }
     footer { text-align: center; color: #61716b; padding: 15px; font-size: 12px; }
+    @media (max-width: 600px) {
+      .card { padding: 17px; }
+      header h1 { font-size: 22px; }
+      .acciones { align-items: stretch; }
+      .acciones button { width: 100%; }
+    }
   </style>
 </head>
 <body>
@@ -129,6 +161,40 @@
       </button>
     </section>
 
+    <section id="seccionRutas" class="card oculto">
+      <div class="acciones">
+        <div>
+          <h2>Rutas registradas</h2>
+          <p class="contador" id="contadorRutas">Preparando consulta...</p>
+        </div>
+        <button id="btnActualizar" type="button">
+          Actualizar rutas
+        </button>
+      </div>
+
+      <p id="msgRutas" class="mensaje" role="status">
+        Esperando consulta...
+      </p>
+
+      <div class="tabla-contenedor">
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Nombre</th>
+              <th>Fecha</th>
+              <th>Municipio</th>
+              <th>Vehículo</th>
+              <th>Conductor (ID)</th>
+              <th>Operario (ID)</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="cuerpoRutas"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card">
       <strong>Estado de conexión</strong>
       <p id="conexion" class="mensaje" role="status">
@@ -144,6 +210,7 @@
     const SUPABASE_KEY = "sb_publishable_HN7tO3CShKqM98mK6qedBg_0-A0J2pS";
 
     const $ = id => document.getElementById(id);
+
     const cliente = window.supabase.createClient(
       SUPABASE_URL,
       SUPABASE_KEY,
@@ -164,12 +231,105 @@
     function mostrarLogin(mensaje = "") {
       $("login").classList.remove("oculto");
       $("panel").classList.add("oculto");
+      $("seccionRutas").classList.add("oculto");
       $("msgLogin").textContent = mensaje;
+      $("cuerpoRutas").replaceChildren();
+      $("contadorRutas").textContent = "";
+    }
+
+    function ocultarRutas() {
+      $("seccionRutas").classList.add("oculto");
+      $("cuerpoRutas").replaceChildren();
+      $("contadorRutas").textContent = "";
+    }
+
+    function agregarCelda(fila, valor, titulo = "") {
+      const celda = document.createElement("td");
+      celda.textContent = valor == null || valor === ""
+        ? "—"
+        : String(valor);
+      if (titulo) celda.title = titulo;
+      fila.appendChild(celda);
+    }
+
+    function mostrarIdentificador(id) {
+      if (!id) return "Sin asignar";
+      return String(id).slice(0, 8) + "…";
+    }
+
+    async function cargarRutas() {
+      $("btnActualizar").disabled = true;
+      $("msgRutas").textContent = "Consultando rutas en la base de datos...";
+      $("contadorRutas").textContent = "Consultando...";
+      $("cuerpoRutas").replaceChildren();
+
+      try {
+        const { data: rutas, error } = await cliente
+          .from("rutas")
+          .select(
+            "id,codigo,nombre,fecha,municipio,vehiculo," +
+            "conductor_id,operario_id,estado"
+          )
+          .order("fecha", { ascending: false });
+
+        if (error) throw error;
+
+        if (!rutas || rutas.length === 0) {
+          $("contadorRutas").textContent = "0 rutas";
+          $("msgRutas").textContent =
+            "La consulta fue exitosa, pero todavía no hay rutas registradas.";
+          return;
+        }
+
+        const fragmento = document.createDocumentFragment();
+
+        rutas.forEach(ruta => {
+          const fila = document.createElement("tr");
+
+          agregarCelda(fila, ruta.codigo);
+          agregarCelda(fila, ruta.nombre);
+          agregarCelda(fila, ruta.fecha);
+          agregarCelda(fila, ruta.municipio);
+          agregarCelda(fila, ruta.vehiculo);
+
+          agregarCelda(
+            fila,
+            mostrarIdentificador(ruta.conductor_id),
+            ruta.conductor_id || ""
+          );
+
+          agregarCelda(
+            fila,
+            mostrarIdentificador(ruta.operario_id),
+            ruta.operario_id || ""
+          );
+
+          agregarCelda(fila, ruta.estado);
+          fragmento.appendChild(fila);
+        });
+
+        $("cuerpoRutas").replaceChildren(fragmento);
+        $("contadorRutas").textContent =
+          rutas.length + (rutas.length === 1 ? " ruta" : " rutas");
+        $("msgRutas").textContent =
+          "Consulta completada. Se muestran las rutas devueltas por Supabase.";
+      } catch (error) {
+        $("contadorRutas").textContent = "Consulta no completada";
+        $("msgRutas").textContent =
+          "No fue posible consultar las rutas.\n" +
+          mostrarError(error) +
+          "\n\nVerifica la conexión, los permisos de la tabla rutas " +
+          "y las políticas de seguridad (RLS).";
+      } finally {
+        $("btnActualizar").disabled = false;
+      }
     }
 
     async function cargarPerfil(usuario) {
       $("login").classList.add("oculto");
       $("panel").classList.remove("oculto");
+      ocultarRutas();
+
       $("usuario").textContent = usuario.email || "Cuenta autenticada";
       $("nombre").textContent = "Consultando...";
       $("rol").textContent = "Consultando...";
@@ -198,27 +358,27 @@
         $("estado").textContent = "No autorizado";
         $("msgPerfil").textContent =
           "La cuenta inició sesión, pero no tiene un perfil coincidente " +
-          "en la tabla perfiles. Solicita revisar la vinculación de la cuenta.";
+          "en la tabla perfiles.";
         return;
       }
 
-      $("nombre").textContent = perfil.nombre;
-      $("rol").textContent = perfil.rol;
+      $("nombre").textContent = perfil.nombre || "Sin nombre";
+      $("rol").textContent = perfil.rol || "Sin asignar";
       $("estado").textContent = perfil.activo ? "Activo" : "Inactivo";
 
-      if (!perfil.activo || !perfil.rol ||
-          perfil.rol === "sin_asignar") {
+      if (!perfil.activo || perfil.rol !== "coordinador") {
         $("msgPerfil").textContent =
-          "Autenticación correcta, pero el perfil no está autorizado " +
-          "para operar. Debe asignarse y validarse el rol antes de " +
-          "habilitar rutas, visitas o recolecciones.";
+          "La cuenta inició sesión, pero esta pantalla está habilitada " +
+          "únicamente para perfiles activos con rol coordinador.";
         return;
       }
 
       $("msgPerfil").textContent =
-        "Perfil encontrado y activo. Esta prueba aún no habilita " +
-        "funciones operativas; los permisos de base de datos deben " +
-        "validarse antes de activarlas.";
+        "Perfil activo y rol coordinador confirmado. " +
+        "Cargando las rutas registradas.";
+
+      $("seccionRutas").classList.remove("oculto");
+      await cargarRutas();
     }
 
     $("formLogin").addEventListener("submit", async event => {
@@ -234,39 +394,54 @@
         });
 
         if (error) throw error;
-        if (!data.user) throw new Error("No se recibió el usuario autenticado.");
+        if (!data.user) {
+          throw new Error("No se recibió el usuario autenticado.");
+        }
 
         $("clave").value = "";
         $("conexion").textContent = "Conexión con Supabase establecida.";
         await cargarPerfil(data.user);
       } catch (error) {
-        mostrarLogin("No fue posible iniciar sesión:\n" + mostrarError(error));
+        mostrarLogin(
+          "No fue posible iniciar sesión:\n" + mostrarError(error)
+        );
       } finally {
         boton.disabled = false;
       }
     });
 
+    $("btnActualizar").addEventListener("click", cargarRutas);
+
     $("btnSalir").addEventListener("click", async () => {
+      $("btnSalir").disabled = true;
       const { error } = await cliente.auth.signOut();
+      $("btnSalir").disabled = false;
+
       if (error) {
         $("msgPerfil").textContent =
           "No se pudo cerrar la sesión: " + mostrarError(error);
         return;
       }
+
       mostrarLogin("Sesión cerrada correctamente.");
     });
 
     async function iniciar() {
       try {
         if (!window.supabase) {
-          throw new Error("No se cargó la biblioteca de Supabase. Verifica internet.");
+          throw new Error(
+            "No se cargó la biblioteca de Supabase. Verifica internet."
+          );
         }
 
-        $("conexion").textContent = "Biblioteca cargada. Revisando sesión...";
+        $("conexion").textContent =
+          "Biblioteca cargada. Revisando sesión...";
+
         const { data, error } = await cliente.auth.getSession();
         if (error) throw error;
 
         $("conexion").textContent = "Conexión inicial lista.";
+
         if (data.session?.user) {
           await cargarPerfil(data.session.user);
         } else {
