@@ -1,235 +1,291 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#123c32">
+  <meta name="theme-color" content="#153b57">
   <title>ProAmSa Rutas</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --verde: #176b4d;
       --azul: #153b57;
-      --fondo: #f2f6f4;
-      --borde: #dce5e0;
+      --fondo: #f1f5f4;
+      --borde: #dce5e2;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: var(--fondo);
-      color: #19332a;
       font-family: Arial, sans-serif;
+      background: var(--fondo);
+      color: #24332f;
     }
     header {
       background: var(--azul);
       color: white;
       padding: 22px 18px;
-      border-bottom: 5px solid #79bc55;
+      border-bottom: 5px solid #42a66d;
     }
     header h1 { margin: 0 0 6px; font-size: 25px; }
-    header p { margin: 0; font-size: 14px; }
-    main { max-width: 850px; margin: auto; padding: 18px; }
-    .panel {
+    header p { margin: 0; opacity: .9; }
+    main {
+      width: min(520px, 92%);
+      margin: 28px auto;
+    }
+    .card {
       background: white;
       border: 1px solid var(--borde);
-      border-radius: 14px;
-      padding: 18px;
-      margin-bottom: 16px;
+      border-radius: 15px;
+      padding: 23px;
+      box-shadow: 0 5px 20px #153b570d;
+      margin-bottom: 18px;
     }
-    h2 { font-size: 19px; margin: 0 0 15px; }
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-    .stat {
-      background: #f5faf7;
-      border: 1px solid var(--borde);
-      border-radius: 10px;
-      padding: 14px;
-    }
-    .stat strong { display: block; font-size: 26px; color: var(--verde); }
-    .stat span { font-size: 13px; }
-    label { display: block; font-weight: bold; font-size: 14px; margin: 12px 0 6px; }
-    input, select, button {
+    h2 { margin-top: 0; color: var(--azul); }
+    label { display: block; font-weight: bold; margin: 15px 0 7px; }
+    input {
       width: 100%;
-      padding: 12px;
+      padding: 13px;
+      border: 1px solid #cbd6d2;
       border-radius: 8px;
       font-size: 16px;
     }
-    input, select { border: 1px solid #b9c9c0; background: white; }
     button {
+      width: 100%;
       border: 0;
+      padding: 13px;
+      border-radius: 8px;
       background: var(--verde);
       color: white;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
-      margin-top: 12px;
-      min-height: 46px;
+      margin-top: 17px;
     }
-    button.secondary { background: white; color: var(--azul); border: 1px solid var(--azul); }
-    .stop {
-      border: 1px solid var(--borde);
-      border-radius: 10px;
-      padding: 12px;
-      margin-top: 10px;
+    button:disabled { opacity: .6; cursor: wait; }
+    .secundario { background: var(--azul); }
+    .mensaje {
+      padding: 13px;
+      border-radius: 8px;
+      background: #edf3f1;
+      white-space: pre-wrap;
       overflow-wrap: anywhere;
+      line-height: 1.5;
+      font-size: 14px;
     }
-    .stop h3 { margin: 0 0 6px; font-size: 16px; }
-    .muted { color: #62756b; font-size: 13px; }
-    .status { color: var(--verde); font-weight: bold; font-size: 13px; }
-    footer { text-align: center; color: #62756b; padding: 15px; font-size: 12px; }
-    @media (min-width: 560px) {
-      .stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-      .formgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
-    }
+    .oculto { display: none; }
+    .dato { padding: 10px 0; border-bottom: 1px solid var(--borde); }
+    .dato strong { display: block; color: var(--azul); margin-bottom: 4px; }
+    footer { text-align: center; color: #61716b; padding: 15px; font-size: 12px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>ProAmSa Rutas</h1>
-    <p>Gestión operativa de recolecciones · Yopal, Casanare</p>
+    <h1>ProAmSa sas</h1>
+    <p>ProAmSa Rutas · Gestión integral de residuos</p>
   </header>
+
   <main>
-    <section class="panel">
-      <h2>Resumen de la ruta</h2>
-      <div class="stats">
-        <div class="stat"><strong id="total">0</strong><span>Paradas</span></div>
-        <div class="stat"><strong id="pendientes">0</strong><span>Pendientes</span></div>
-        <div class="stat"><strong id="visitas">0</strong><span>Visitas registradas</span></div>
-        <div class="stat"><strong id="kilos">0</strong><span>Kg recolectados</span></div>
-      </div>
-    </section>
+    <section id="login" class="card">
+      <h2>Ingreso al sistema</h2>
+      <p>Ingresa con tu cuenta autorizada para continuar.</p>
+      <form id="formLogin">
+        <label for="correo">Correo electrónico</label>
+        <input id="correo" type="email" autocomplete="username"
+               required placeholder="usuario@empresa.com">
 
-    <section class="panel">
-      <h2>Crear parada de prueba</h2>
-      <p class="muted">Esta primera versión es una demostración local. Los datos no se envían a un servidor.</p>
-      <form id="formulario">
-        <div class="formgrid">
-          <div>
-            <label for="cliente">Nombre del cliente *</label>
-            <input id="cliente" required placeholder="Nombre o razón social">
-          </div>
-          <div>
-            <label for="direccion">Dirección *</label>
-            <input id="direccion" required placeholder="Dirección de recolección">
-          </div>
-          <div>
-            <label for="residuo">Tipo de residuo</label>
-            <select id="residuo">
-              <option>Biosanitario</option>
-              <option>Cortopunzante</option>
-              <option>Anatomopatológico</option>
-              <option>Fármacos</option>
-              <option>Químicos</option>
-              <option>Otro</option>
-            </select>
-          </div>
-          <div>
-            <label for="peso">Kilogramos recolectados</label>
-            <input id="peso" type="number" min="0" step="0.01" value="0">
-          </div>
-        </div>
-        <button type="submit">Agregar parada</button>
+        <label for="clave">Contraseña</label>
+        <input id="clave" type="password" autocomplete="current-password"
+               required placeholder="Tu contraseña">
+
+        <button id="btnLogin" type="submit">Iniciar sesión</button>
       </form>
-      <p id="mensaje" class="muted" aria-live="polite"></p>
+      <p id="msgLogin" class="mensaje" role="status">
+        Preparando conexión segura...
+      </p>
     </section>
 
-    <section class="panel">
-      <h2>Paradas de la ruta</h2>
-      <div id="lista"><p class="muted">Todavía no hay paradas.</p></div>
+    <section id="panel" class="card oculto">
+      <h2>Sesión iniciada</h2>
+      <div class="dato">
+        <strong>Cuenta</strong>
+        <span id="usuario"></span>
+      </div>
+      <div class="dato">
+        <strong>Nombre del perfil</strong>
+        <span id="nombre"></span>
+      </div>
+      <div class="dato">
+        <strong>Rol asignado</strong>
+        <span id="rol"></span>
+      </div>
+      <div class="dato">
+        <strong>Estado de autorización</strong>
+        <span id="estado"></span>
+      </div>
+      <p id="msgPerfil" class="mensaje" role="status"></p>
+      <button id="btnSalir" class="secundario" type="button">
+        Cerrar sesión
+      </button>
     </section>
-    <footer>ProAmSa sas · Prototipo inicial · No usar todavía como registro oficial</footer>
+
+    <section class="card">
+      <strong>Estado de conexión</strong>
+      <p id="conexion" class="mensaje" role="status">
+        Verificando configuración...
+      </p>
+    </section>
   </main>
+
+  <footer>ProAmSa sas · Acceso restringido a personal autorizado</footer>
+
   <script>
-    const paradas = [];
+    const SUPABASE_URL = "https://bbvrvurfdnojwnokkxsh.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_HN7tO3CShKqM98mK6qedBg_0-A0J2pS";
+
     const $ = id => document.getElementById(id);
-
-    function actualizar() {
-      $('total').textContent = paradas.length;
-      $('pendientes').textContent = paradas.filter(p => !p.visitada).length;
-      $('visitas').textContent = paradas.filter(p => p.visitada).length;
-      $('kilos').textContent = paradas.reduce((s, p) => s + (p.visitada ? p.kilos : 0), 0).toLocaleString('es-CO');
-
-      const lista = $('lista');
-      lista.replaceChildren();
-
-      if (!paradas.length) {
-        const p = document.createElement('p');
-        p.className = 'muted';
-        p.textContent = 'Todavía no hay paradas.';
-        lista.appendChild(p);
-        return;
-      }
-
-      paradas.forEach((p, i) => {
-        const tarjeta = document.createElement('article');
-        tarjeta.className = 'stop';
-
-        const titulo = document.createElement('h3');
-        titulo.textContent = (i + 1) + '. ' + p.cliente;
-
-        const direccion = document.createElement('p');
-        direccion.textContent = p.direccion;
-
-        const detalle = document.createElement('p');
-        detalle.className = 'muted';
-        detalle.textContent = p.residuo + ' · ' + (p.visitada ? p.kilos + ' kg registrados' : 'Sin visita registrada');
-
-        const estado = document.createElement('p');
-        estado.className = 'status';
-        estado.textContent = p.visitada ? 'Visita completada' : 'Pendiente';
-
-        tarjeta.append(titulo, direccion, detalle, estado);
-
-        if (!p.visitada) {
-          const boton = document.createElement('button');
-          boton.type = 'button';
-          boton.textContent = 'Registrar recolección';
-          boton.addEventListener('click', () => {
-            const peso = prompt('Ingresa los kilogramos recolectados. Escribe 0 si no hubo residuos.');
-            if (peso === null || peso.trim() === '') return;
-            const valor = Number(peso);
-            if (!Number.isFinite(valor) || valor < 0) {
-              alert('Ingresa un peso válido, igual o mayor que cero.');
-              return;
-            }
-            p.kilos = valor;
-            p.visitada = true;
-            actualizar();
-          });
-          tarjeta.appendChild(boton);
+    const cliente = window.supabase.createClient(
+      SUPABASE_URL,
+      SUPABASE_KEY,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
         }
+      }
+    );
 
-        lista.appendChild(tarjeta);
-      });
+    function mostrarError(error) {
+      if (!error) return "Error desconocido.";
+      return error.message || String(error);
     }
 
-    $('formulario').addEventListener('submit', e => {
-      e.preventDefault();
-      const cliente = $('cliente').value.trim();
-      const direccion = $('direccion').value.trim();
-      const kilos = Number($('peso').value);
+    function mostrarLogin(mensaje = "") {
+      $("login").classList.remove("oculto");
+      $("panel").classList.add("oculto");
+      $("msgLogin").textContent = mensaje;
+    }
 
-      if (!cliente || !direccion || !Number.isFinite(kilos) || kilos < 0) {
-        $('mensaje').textContent = 'Revisa el nombre, la dirección y el peso.';
+    async function cargarPerfil(usuario) {
+      $("login").classList.add("oculto");
+      $("panel").classList.remove("oculto");
+      $("usuario").textContent = usuario.email || "Cuenta autenticada";
+      $("nombre").textContent = "Consultando...";
+      $("rol").textContent = "Consultando...";
+      $("estado").textContent = "Consultando...";
+      $("msgPerfil").textContent = "Verificando permisos del perfil...";
+
+      const { data: perfil, error } = await cliente
+        .from("perfiles")
+        .select("id,nombre,rol,activo")
+        .eq("id", usuario.id)
+        .maybeSingle();
+
+      if (error) {
+        $("nombre").textContent = "No disponible";
+        $("rol").textContent = "No disponible";
+        $("estado").textContent = "No verificado";
+        $("msgPerfil").textContent =
+          "No se pudo consultar el perfil. " + mostrarError(error) +
+          "\nNo se habilitan funciones operativas.";
         return;
       }
 
-      paradas.push({
-        cliente,
-        direccion,
-        residuo: $('residuo').value,
-        kilos: 0,
-        visitada: false
-      });
+      if (!perfil) {
+        $("nombre").textContent = "Sin perfil registrado";
+        $("rol").textContent = "Sin asignar";
+        $("estado").textContent = "No autorizado";
+        $("msgPerfil").textContent =
+          "La cuenta inició sesión, pero no tiene un perfil coincidente " +
+          "en la tabla perfiles. Solicita revisar la vinculación de la cuenta.";
+        return;
+      }
 
-      $('formulario').reset();
-      $('peso').value = '0';
-      $('mensaje').textContent = 'Parada agregada correctamente.';
-      actualizar();
+      $("nombre").textContent = perfil.nombre;
+      $("rol").textContent = perfil.rol;
+      $("estado").textContent = perfil.activo ? "Activo" : "Inactivo";
+
+      if (!perfil.activo || !perfil.rol ||
+          perfil.rol === "sin_asignar") {
+        $("msgPerfil").textContent =
+          "Autenticación correcta, pero el perfil no está autorizado " +
+          "para operar. Debe asignarse y validarse el rol antes de " +
+          "habilitar rutas, visitas o recolecciones.";
+        return;
+      }
+
+      $("msgPerfil").textContent =
+        "Perfil encontrado y activo. Esta prueba aún no habilita " +
+        "funciones operativas; los permisos de base de datos deben " +
+        "validarse antes de activarlas.";
+    }
+
+    $("formLogin").addEventListener("submit", async event => {
+      event.preventDefault();
+      const boton = $("btnLogin");
+      boton.disabled = true;
+      $("msgLogin").textContent = "Validando credenciales...";
+
+      try {
+        const { data, error } = await cliente.auth.signInWithPassword({
+          email: $("correo").value.trim(),
+          password: $("clave").value
+        });
+
+        if (error) throw error;
+        if (!data.user) throw new Error("No se recibió el usuario autenticado.");
+
+        $("clave").value = "";
+        $("conexion").textContent = "Conexión con Supabase establecida.";
+        await cargarPerfil(data.user);
+      } catch (error) {
+        mostrarLogin("No fue posible iniciar sesión:\n" + mostrarError(error));
+      } finally {
+        boton.disabled = false;
+      }
     });
 
-    actualizar();
+    $("btnSalir").addEventListener("click", async () => {
+      const { error } = await cliente.auth.signOut();
+      if (error) {
+        $("msgPerfil").textContent =
+          "No se pudo cerrar la sesión: " + mostrarError(error);
+        return;
+      }
+      mostrarLogin("Sesión cerrada correctamente.");
+    });
+
+    async function iniciar() {
+      try {
+        if (!window.supabase) {
+          throw new Error("No se cargó la biblioteca de Supabase. Verifica internet.");
+        }
+
+        $("conexion").textContent = "Biblioteca cargada. Revisando sesión...";
+        const { data, error } = await cliente.auth.getSession();
+        if (error) throw error;
+
+        $("conexion").textContent = "Conexión inicial lista.";
+        if (data.session?.user) {
+          await cargarPerfil(data.session.user);
+        } else {
+          mostrarLogin("Conexión lista. Ingresa con tu cuenta.");
+        }
+      } catch (error) {
+        $("conexion").textContent =
+          "No se pudo verificar la conexión:\n" + mostrarError(error);
+        mostrarLogin("Revisa la conexión y vuelve a intentarlo.");
+      }
+    }
+
+    cliente.auth.onAuthStateChange((evento, sesion) => {
+      if (evento === "SIGNED_OUT") {
+        mostrarLogin("Sesión cerrada.");
+      }
+    });
+
+    iniciar();
   </script>
 </body>
 </html>
