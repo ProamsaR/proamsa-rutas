@@ -425,8 +425,13 @@
         "Perfil activo y rol coordinador confirmado. " +
         "Cargando las rutas registradas.";
 
-      $("seccionRutas").classList.remove("oculto");
-      await cargarRutas();
+     $("seccionCrearRuta").classList.remove("oculto");
+$("seccionRutas").classList.remove("oculto");
+
+$("msgCrearRuta").textContent =
+  "Formulario de creación de rutas disponible.";
+
+await cargarRutas();
     }
 
     $("formLogin").addEventListener("submit", async event => {
