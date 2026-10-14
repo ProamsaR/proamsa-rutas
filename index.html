@@ -160,7 +160,55 @@
         Cerrar sesión
       </button>
     </section>
+<section id="seccionCrearRuta" class="card oculto">
+  <h2>Crear nueva ruta</h2>
 
+  <form id="formCrearRuta">
+    <label for="rutaCodigo">Código de ruta</label>
+    <input
+      id="rutaCodigo"
+      type="text"
+      required
+      placeholder="RUT-20261014-001"
+    >
+
+    <label for="rutaNombre">Nombre de la ruta</label>
+    <input
+      id="rutaNombre"
+      type="text"
+      required
+      placeholder="Ruta Yopal Centro"
+    >
+
+    <label for="rutaFecha">Fecha</label>
+    <input
+      id="rutaFecha"
+      type="date"
+      required
+    >
+
+    <label for="rutaMunicipio">Municipio</label>
+    <input
+      id="rutaMunicipio"
+      type="text"
+      value="Yopal"
+      required
+    >
+
+    <label for="rutaVehiculo">Vehículo</label>
+    <input
+      id="rutaVehiculo"
+      type="text"
+      placeholder="Vehículo asignado"
+    >
+
+    <button id="btnCrearRuta" type="submit">
+      Crear ruta
+    </button>
+  </form>
+
+  <p id="msgCrearRuta" class="mensaje" role="status"></p>
+</section>
     <section id="seccionRutas" class="card oculto">
       <div class="acciones">
         <div>
@@ -411,7 +459,84 @@
     });
 
     $("btnActualizar").addEventListener("click", cargarRutas);
+$("formCrearRuta").addEventListener("submit", async event => {
+  event.preventDefault();
 
+  const boton = $("btnCrearRuta");
+  const mensaje = $("msgCrearRuta");
+
+  boton.disabled = true;
+  mensaje.textContent = "Guardando ruta...";
+
+  try {
+    const { data: sesionData, error: sesionError } =
+      await cliente.auth.getSession();
+
+    if (sesionError) throw sesionError;
+
+    const usuario = sesionData.session?.user;
+
+    if (!usuario) {
+      throw new Error("La sesión ha expirado. Ingresa nuevamente.");
+    }
+
+    const codigo = $("rutaCodigo").value.trim();
+    const nombre = $("rutaNombre").value.trim();
+    const fecha = $("rutaFecha").value;
+    const municipio = $("rutaMunicipio").value.trim();
+    const vehiculo = $("rutaVehiculo").value.trim();
+
+    if (!codigo || !nombre || !fecha || !municipio) {
+      throw new Error("Completa todos los campos obligatorios.");
+    }
+
+    const { data: existente, error: consultaError } = await cliente
+      .from("rutas")
+      .select("id")
+      .eq("codigo", codigo)
+      .maybeSingle();
+
+    if (consultaError) throw consultaError;
+
+    if (existente) {
+      throw new Error("Ese código de ruta ya existe. Utiliza otro.");
+    }
+
+    const { data, error } = await cliente
+      .from("rutas")
+      .insert({
+        codigo,
+        nombre,
+        fecha,
+        municipio,
+        vehiculo: vehiculo || null,
+        conductor_id: null,
+        operario_id: null,
+        estado: "programada",
+        creada_por: usuario.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    $("formCrearRuta").reset();
+    $("rutaMunicipio").value = "Yopal";
+
+    mensaje.textContent =
+      "¡Ruta creada correctamente!\nCódigo: " + data.codigo;
+
+    await cargarRutas();
+
+  } catch (error) {
+    mensaje.textContent =
+      "No se pudo crear la ruta:\n" +
+      (error.message || String(error)) +
+      "\n\nVerifica los permisos de Supabase y los campos obligatorios.";
+  } finally {
+    boton.disabled = false;
+  }
+});
     $("btnSalir").addEventListener("click", async () => {
       $("btnSalir").disabled = true;
       const { error } = await cliente.auth.signOut();
