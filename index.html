@@ -610,7 +610,7 @@
           agregarCelda(fila, p.cliente && p.cliente.direccion);
           agregarCelda(fila, p.cliente && p.cliente.municipio);
           const visitaExistente = visitasPorParada[p.id];
-          agregarCelda(fila, visitaExistente ? `Atendida: ${visitaExistente.resultado}` : p.estado);
+          agregarCelda(fila, p.estado);
           const celdaAccion = document.createElement("td");
           const botonVisita = document.createElement("button");
           botonVisita.type = "button";
