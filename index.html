@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#153b57">
   <title>ProAmSa Rutas</title>
+  <meta name="application-version" content="2026.10.15-visitas-fix-1">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -42,7 +43,7 @@
     }
     h2 { margin-top: 0; color: var(--azul); }
     label { display: block; font-weight: bold; margin: 15px 0 7px; }
-    input {
+    input, select {
       width: 100%;
       padding: 13px;
       border: 1px solid #cbd6d2;
@@ -102,6 +103,11 @@
     th { background: #edf3f1; color: var(--azul); }
     tbody tr:hover { background: #f7faf9; }
     .contador { color: #52655d; font-size: 14px; }
+    .boton-pequeno { padding: 8px 10px; margin: 0; font-size: 13px; }
+    .lista-residuos { color: #52655d; font-size: 13px; }
+    .fila-residuo { display:grid; grid-template-columns:2fr 1fr auto; gap:10px; align-items:end; margin:12px 0; }
+    .fila-residuo label { margin-top:0; }
+    @media (max-width:600px) { .fila-residuo { grid-template-columns:1fr; } }
     footer { text-align: center; color: #61716b; padding: 15px; font-size: 12px; }
     @media (max-width: 600px) {
       .card { padding: 17px; }
@@ -243,6 +249,69 @@
       </div>
     </section>
 
+    <section id="seccionParadas" class="card oculto">
+      <h2>Asignar clientes a una ruta</h2>
+      <p>Selecciona una ruta y busca los clientes activos para agregarlos al recorrido.</p>
+      <label for="seleccionRuta">Ruta de trabajo</label>
+      <select id="seleccionRuta">
+        <option value="">Primero carga las rutas...</option>
+      </select>
+      <button id="btnCargarParadas" type="button" class="secundario">Consultar paradas de la ruta</button>
+      <p id="msgParadas" class="mensaje" role="status">Selecciona una ruta para comenzar.</p>
+
+      <hr>
+      <h3>Buscar clientes activos</h3>
+      <label for="busquedaCliente">Código, razón social, nombre comercial o identificación</label>
+      <input id="busquedaCliente" type="search" placeholder="Ej. 836 o nombre del cliente" autocomplete="off">
+      <p id="msgBusqueda" class="contador">Escribe al menos 2 caracteres para buscar.</p>
+      <div class="tabla-contenedor">
+        <table style="min-width: 850px">
+          <thead><tr><th>Código</th><th>Cliente</th><th>Identificación</th><th>Dirección</th><th>Municipio</th><th>Tipos de residuos</th><th>Acción</th></tr></thead>
+          <tbody id="cuerpoBusqueda"></tbody>
+        </table>
+      </div>
+
+      <hr>
+      <h3>Clientes programados en la ruta</h3>
+      <p id="contadorParadas" class="contador">Sin ruta seleccionada.</p>
+      <div class="tabla-contenedor">
+        <table style="min-width: 750px">
+          <thead><tr><th>Orden</th><th>Código</th><th>Cliente</th><th>Dirección</th><th>Municipio</th><th>Estado</th><th>Acción</th></tr></thead>
+          <tbody id="cuerpoParadas"></tbody>
+        </table>
+      </div>
+      <hr>
+      <section id="seccionRegistrarVisita" class="oculto">
+        <h3>Registrar visita</h3>
+        <p id="paradaSeleccionadaTexto" class="mensaje"></p>
+        <form id="formRegistrarVisita">
+          <input id="visitaParadaId" type="hidden">
+          <label for="visitaResultado">Resultado de la visita</label>
+          <select id="visitaResultado" required>
+            <option value="">Selecciona el resultado...</option>
+            <option value="recoleccion_efectiva">Recolección efectiva</option>
+            <option value="sin_residuos">Sin residuos</option>
+            <option value="cliente_ausente">Cliente ausente</option>
+            <option value="no_atendida">No atendida</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <label for="visitaObservaciones">Observaciones</label>
+          <textarea id="visitaObservaciones" rows="3" style="width:100%;padding:13px;border:1px solid #cbd6d2;border-radius:8px;font:inherit" placeholder="Observaciones de la visita"></textarea>
+          <label for="visitaNovedad">Novedad</label>
+          <input id="visitaNovedad" type="text" placeholder="Ej. establecimiento cerrado">
+          <div id="seccionDetallesResiduos" class="oculto">
+            <h4>Residuos recolectados</h4>
+            <p class="contador">Selecciona los residuos registrados para el cliente e indica los kilogramos.</p>
+            <div id="filasResiduos"></div>
+            <button id="btnAgregarResiduo" class="secundario" type="button">+ Agregar residuo</button>
+          </div>
+          <button id="btnGuardarVisita" type="submit">Guardar visita</button>
+          <button id="btnCancelarVisita" class="secundario" type="button">Cancelar</button>
+        </form>
+        <p id="msgVisita" class="mensaje" role="status"></p>
+      </section>
+    </section>
+
     <section class="card">
       <strong>Estado de conexión</strong>
       <p id="conexion" class="mensaje" role="status">
@@ -251,7 +320,7 @@
     </section>
   </main>
 
-  <footer>ProAmSa sas · Acceso restringido a personal autorizado</footer>
+  <footer>ProAmSa sas · Acceso restringido a personal autorizado · Versión 2026.10.15-visitas-fix-1</footer>
 
   <script>
     const SUPABASE_URL = "https://bbvrvurfdnojwnokkxsh.supabase.co";
@@ -280,6 +349,8 @@
       $("login").classList.remove("oculto");
       $("panel").classList.add("oculto");
       $("seccionRutas").classList.add("oculto");
+      $("seccionCrearRuta").classList.add("oculto");
+      $("seccionParadas").classList.add("oculto");
       $("msgLogin").textContent = mensaje;
       $("cuerpoRutas").replaceChildren();
       $("contadorRutas").textContent = "";
@@ -287,6 +358,7 @@
 
     function ocultarRutas() {
       $("seccionRutas").classList.add("oculto");
+      $("seccionParadas").classList.add("oculto");
       $("cuerpoRutas").replaceChildren();
       $("contadorRutas").textContent = "";
     }
@@ -373,7 +445,394 @@
       }
     }
 
+    let clientesActivosCache = null;
+    let temporizadorBusqueda = null;
+
+    function textoSeguro(valor) {
+      return valor == null || valor === "" ? "—" : String(valor);
+    }
+
+    async function cargarOpcionesRuta() {
+      const selector = $("seleccionRuta");
+      selector.replaceChildren();
+      const inicial = document.createElement("option");
+      inicial.value = "";
+      inicial.textContent = "Selecciona una ruta...";
+      selector.appendChild(inicial);
+      const { data: rutas, error } = await cliente
+        .from("rutas")
+        .select("id,codigo,nombre,fecha,municipio,estado")
+        .order("fecha", { ascending: false })
+        .limit(1000);
+      if (error) {
+        $("msgParadas").textContent = "No se pudieron cargar las rutas: " + mostrarError(error);
+        return;
+      }
+      (rutas || []).forEach(ruta => {
+        const opcion = document.createElement("option");
+        opcion.value = ruta.id;
+        opcion.textContent = `${ruta.codigo} · ${ruta.nombre} · ${ruta.fecha}`;
+        selector.appendChild(opcion);
+      });
+      if (!rutas || rutas.length === 0) {
+        $("msgParadas").textContent = "No hay rutas registradas para asignar clientes.";
+      } else {
+        $("msgParadas").textContent = "Selecciona una ruta y pulsa «Consultar paradas de la ruta».";
+      }
+    }
+
+    async function obtenerClientesActivos() {
+      if (clientesActivosCache) return clientesActivosCache;
+      const { data, error } = await cliente
+        .from("clientes")
+        .select("id,codigo,razon_social,nombre_comercial,identificacion,direccion,barrio,municipio,tipos_residuo,activo")
+        .eq("activo", true)
+        .order("codigo", { ascending: true })
+        .limit(1000);
+      if (error) throw error;
+      clientesActivosCache = data || [];
+      return clientesActivosCache;
+    }
+
+    function nombreCliente(c) {
+      return c.nombre_comercial || c.razon_social || "Cliente sin nombre";
+    }
+
+    async function buscarClientes() {
+      const termino = $("busquedaCliente").value.trim().toLocaleLowerCase("es");
+      const cuerpo = $("cuerpoBusqueda");
+      cuerpo.replaceChildren();
+      if (termino.length < 2) {
+        $("msgBusqueda").textContent = "Escribe al menos 2 caracteres para buscar.";
+        return;
+      }
+      $("msgBusqueda").textContent = "Buscando clientes activos...";
+      try {
+        const clientes = await obtenerClientesActivos();
+        const coincidencias = clientes.filter(c =>
+          [c.codigo, c.razon_social, c.nombre_comercial, c.identificacion]
+            .some(v => String(v || "").toLocaleLowerCase("es").includes(termino))
+        ).slice(0, 50);
+        const fragmento = document.createDocumentFragment();
+        coincidencias.forEach(c => {
+          const fila = document.createElement("tr");
+          agregarCelda(fila, c.codigo);
+          agregarCelda(fila, nombreCliente(c));
+          agregarCelda(fila, c.identificacion);
+          agregarCelda(fila, c.direccion);
+          agregarCelda(fila, c.municipio);
+          const residuos = Array.isArray(c.tipos_residuo) ? c.tipos_residuo.join(", ") : textoSeguro(c.tipos_residuo);
+          const celdaResiduos = document.createElement("td");
+          celdaResiduos.textContent = residuos;
+          celdaResiduos.className = "lista-residuos";
+          fila.appendChild(celdaResiduos);
+          const celdaAccion = document.createElement("td");
+          const boton = document.createElement("button");
+          boton.type = "button";
+          boton.className = "boton-pequeno";
+          boton.textContent = "Agregar";
+          boton.addEventListener("click", () => agregarClienteRuta(c));
+          celdaAccion.appendChild(boton);
+          fila.appendChild(celdaAccion);
+          fragmento.appendChild(fila);
+        });
+        cuerpo.replaceChildren(fragmento);
+        $("msgBusqueda").textContent = `${coincidencias.length} coincidencia(s) mostradas. Total de clientes activos consultados: ${clientes.length}.`;
+        if (coincidencias.length === 0) $("msgBusqueda").textContent = "No se encontraron clientes activos con ese criterio.";
+      } catch (error) {
+        $("msgBusqueda").textContent = "No fue posible buscar clientes: " + mostrarError(error);
+      }
+    }
+
+    async function agregarClienteRuta(c) {
+      const rutaId = $("seleccionRuta").value;
+      if (!rutaId) {
+        $("msgParadas").textContent = "Primero selecciona una ruta.";
+        return;
+      }
+      const botones = $("cuerpoBusqueda").querySelectorAll("button");
+      botones.forEach(b => b.disabled = true);
+      $("msgParadas").textContent = `Agregando ${nombreCliente(c)} a la ruta...`;
+      try {
+        const { data: duplicado, error: errorDuplicado } = await cliente
+          .from("paradas").select("id").eq("ruta_id", rutaId).eq("cliente_id", c.id).maybeSingle();
+        if (errorDuplicado) throw errorDuplicado;
+        if (duplicado) throw new Error("Este cliente ya está agregado a esta ruta.");
+        const { data: existentes, error: errorOrden } = await cliente
+          .from("paradas").select("orden").eq("ruta_id", rutaId).order("orden", { ascending: false }).limit(1);
+        if (errorOrden) throw errorOrden;
+        const siguienteOrden = existentes && existentes.length ? Number(existentes[0].orden) + 1 : 1;
+        const { error } = await cliente.from("paradas").insert({
+          ruta_id: rutaId, cliente_id: c.id, orden: siguienteOrden, estado: "pendiente"
+        });
+        if (error) throw error;
+        $("msgParadas").textContent = `Cliente agregado correctamente. Orden de visita: ${siguienteOrden}.`;
+        await cargarParadasRuta();
+      } catch (error) {
+        $("msgParadas").textContent = "No se pudo agregar el cliente: " + mostrarError(error);
+      } finally {
+        botones.forEach(b => b.disabled = false);
+      }
+    }
+
+    async function cargarParadasRuta() {
+      const rutaId = $("seleccionRuta").value;
+      const cuerpo = $("cuerpoParadas");
+      cuerpo.replaceChildren();
+      if (!rutaId) {
+        $("contadorParadas").textContent = "Sin ruta seleccionada.";
+        $("msgParadas").textContent = "Selecciona una ruta primero.";
+        return;
+      }
+      $("contadorParadas").textContent = "Consultando paradas...";
+      try {
+        const { data: paradas, error } = await cliente
+          .from("paradas")
+          .select("id,orden,estado,cliente:clientes(id,codigo,razon_social,nombre_comercial,direccion,municipio,tipos_residuo)")
+          .eq("ruta_id", rutaId)
+          .order("orden", { ascending: true });
+        if (error) throw error;
+        const listaParadas = paradas || [];
+        const visitasPorParada = {};
+        if (listaParadas.length) {
+          const { data: visitas, error: errorVisitas } = await cliente
+            .from("visitas").select("id,parada_id,resultado")
+            .in("parada_id", listaParadas.map(p => p.id));
+          if (errorVisitas) throw errorVisitas;
+          (visitas || []).forEach(v => { visitasPorParada[v.parada_id] = v; });
+        }
+        const fragmento = document.createDocumentFragment();
+        listaParadas.forEach(p => {
+          const fila = document.createElement("tr");
+          agregarCelda(fila, p.orden);
+          agregarCelda(fila, p.cliente && p.cliente.codigo);
+          agregarCelda(fila, p.cliente ? nombreCliente(p.cliente) : "Cliente no disponible");
+          agregarCelda(fila, p.cliente && p.cliente.direccion);
+          agregarCelda(fila, p.cliente && p.cliente.municipio);
+          const visitaExistente = visitasPorParada[p.id];
+          agregarCelda(fila, visitaExistente ? `Atendida: ${visitaExistente.resultado}` : p.estado);
+          const celdaAccion = document.createElement("td");
+          const botonVisita = document.createElement("button");
+          botonVisita.type = "button";
+          botonVisita.className = "boton-pequeno";
+          botonVisita.textContent = visitaExistente ? "Visita registrada" : "Registrar visita";
+          botonVisita.disabled = Boolean(visitaExistente);
+          botonVisita.addEventListener("click", () => abrirFormularioVisita(p));
+          celdaAccion.appendChild(botonVisita);
+          fila.appendChild(celdaAccion);
+          fragmento.appendChild(fila);
+        });
+        cuerpo.replaceChildren(fragmento);
+        $("contadorParadas").textContent = `${listaParadas.length} cliente(s) programado(s) en esta ruta.`;
+        if (!listaParadas.length) $("msgParadas").textContent = "Esta ruta todavía no tiene clientes asignados.";
+      } catch (error) {
+        $("contadorParadas").textContent = "No se pudieron consultar las paradas.";
+        $("msgParadas").textContent = "Error al consultar la ruta: " + mostrarError(error);
+      }
+    }
+
+    let usuarioActual = null;
+    let paradaActual = null;
+
+    function cerrarFormularioVisita() {
+      $("seccionRegistrarVisita").classList.add("oculto");
+      $("formRegistrarVisita").reset();
+      $("filasResiduos").replaceChildren();
+      $("seccionDetallesResiduos").classList.add("oculto");
+      paradaActual = null;
+    }
+
+    function agregarFilaResiduo(tipos) {
+      const fila = document.createElement("div");
+      fila.className = "fila-residuo";
+      const grupoTipo = document.createElement("div");
+      const etiquetaTipo = document.createElement("label");
+      etiquetaTipo.textContent = "Tipo de residuo";
+      const selector = document.createElement("select");
+      selector.className = "tipo-residuo-visita";
+      selector.required = true;
+      const inicial = document.createElement("option");
+      inicial.value = "";
+      inicial.textContent = "Selecciona un residuo...";
+      selector.appendChild(inicial);
+      tipos.forEach(tipo => {
+        const opcion = document.createElement("option");
+        opcion.value = tipo;
+        opcion.textContent = tipo;
+        selector.appendChild(opcion);
+      });
+      etiquetaTipo.appendChild(selector);
+      grupoTipo.appendChild(etiquetaTipo);
+
+      const grupoKg = document.createElement("div");
+      const etiquetaKg = document.createElement("label");
+      etiquetaKg.textContent = "Kilogramos";
+      const kg = document.createElement("input");
+      kg.type = "number";
+      kg.min = "0.001";
+      kg.step = "0.001";
+      kg.required = true;
+      kg.className = "kilogramos-residuo";
+      kg.placeholder = "Ej. 2.5";
+      etiquetaKg.appendChild(kg);
+      grupoKg.appendChild(etiquetaKg);
+
+      const quitar = document.createElement("button");
+      quitar.type = "button";
+      quitar.className = "secundario";
+      quitar.textContent = "Quitar";
+      quitar.addEventListener("click", () => fila.remove());
+      fila.append(grupoTipo, grupoKg, quitar);
+      $("filasResiduos").appendChild(fila);
+    }
+
+    async function abrirFormularioVisita(parada) {
+      try {
+        const { data: existente, error } = await cliente
+          .from("visitas").select("id").eq("parada_id", parada.id).maybeSingle();
+        if (error) throw error;
+        if (existente) {
+          $("msgParadas").textContent = "Esta parada ya tiene una visita registrada.";
+          await cargarParadasRuta();
+          return;
+        }
+        paradaActual = parada;
+        $("visitaParadaId").value = parada.id;
+        $("paradaSeleccionadaTexto").textContent =
+          `Cliente: ${nombreCliente(parada.cliente || {})} · Código: ${parada.cliente?.codigo || "—"} · Orden: ${parada.orden}`;
+        $("msgVisita").textContent = "Completa el resultado. Para una recolección efectiva debes registrar al menos un residuo y su peso.";
+        $("filasResiduos").replaceChildren();
+        const crudos = parada.cliente?.tipos_residuo;
+        const tipos = Array.isArray(crudos) ? crudos : (typeof crudos === "string" ? crudos.split(",").map(x => x.trim()).filter(Boolean) : []);
+        paradaActual.tiposResiduo = tipos;
+        $("seccionDetallesResiduos").classList.add("oculto");
+        $("seccionRegistrarVisita").classList.remove("oculto");
+        $("seccionRegistrarVisita").scrollIntoView({ behavior: "smooth", block: "start" });
+      } catch (error) {
+        $("msgParadas").textContent = "No se pudo preparar el formulario de visita: " + mostrarError(error);
+      }
+    }
+
+    $("visitaResultado").addEventListener("change", () => {
+      const efectiva = $("visitaResultado").value === "recoleccion_efectiva";
+      $("seccionDetallesResiduos").classList.toggle("oculto", !efectiva);
+      if (efectiva && !$("filasResiduos").children.length) {
+        const tipos = paradaActual?.tiposResiduo || [];
+        if (tipos.length) agregarFilaResiduo(tipos);
+        else $("msgVisita").textContent = "Este cliente no tiene tipos de residuos registrados. No se puede completar una recolección efectiva hasta verificar su clasificación.";
+      }
+    });
+
+    $("btnAgregarResiduo").addEventListener("click", () => {
+      const tipos = paradaActual?.tiposResiduo || [];
+      if (!tipos.length) {
+        $("msgVisita").textContent = "No hay tipos de residuos registrados para este cliente.";
+        return;
+      }
+      agregarFilaResiduo(tipos);
+    });
+
+    $("btnCancelarVisita").addEventListener("click", cerrarFormularioVisita);
+
+    $("formRegistrarVisita").addEventListener("submit", async event => {
+      event.preventDefault();
+      const boton = $("btnGuardarVisita");
+      boton.disabled = true;
+      $("msgVisita").textContent = "Guardando visita...";
+      try {
+        const { data: sesion, error: errorSesion } = await cliente.auth.getSession();
+        if (errorSesion) throw errorSesion;
+        const usuario = sesion.session?.user;
+        if (!usuario) throw new Error("La sesión expiró. Inicia sesión nuevamente.");
+        const paradaId = $("visitaParadaId").value;
+        const resultado = $("visitaResultado").value;
+        if (!paradaId || !resultado) throw new Error("Selecciona una parada y un resultado.");
+        const { data: duplicada, error: errorDuplicada } = await cliente
+          .from("visitas").select("id").eq("parada_id", paradaId).maybeSingle();
+        if (errorDuplicada) throw errorDuplicada;
+        if (duplicada) throw new Error("Esta parada ya tiene una visita. Actualiza la lista antes de continuar.");
+
+        const detalles = [];
+        if (resultado === "recoleccion_efectiva") {
+          const filas = [...$("filasResiduos").querySelectorAll(".fila-residuo")];
+          if (!filas.length) throw new Error("Para una recolección efectiva registra al menos un residuo.");
+          const vistos = new Set();
+          filas.forEach(fila => {
+            const tipo = fila.querySelector(".tipo-residuo-visita").value;
+            const kgTexto = fila.querySelector(".kilogramos-residuo").value;
+            const kg = Number(kgTexto);
+            if (!tipo) throw new Error("Selecciona el tipo de residuo en cada fila.");
+            if (!Number.isFinite(kg) || kg <= 0) throw new Error("Los kilogramos deben ser un número mayor que cero.");
+            if (vistos.has(tipo)) throw new Error(`El residuo «${tipo}» está repetido. Combina sus kilogramos en una sola fila.`);
+            vistos.add(tipo);
+            detalles.push({ tipo_residuo: tipo, kilogramos: kg });
+          });
+        }
+
+        const ahora = new Date().toISOString();
+        const { data: visita, error: errorInsertarVisita } = await cliente
+          .from("visitas").insert({
+            parada_id: paradaId,
+            resultado,
+            observaciones: $("visitaObservaciones").value.trim() || null,
+            novedad: $("visitaNovedad").value.trim() || null,
+            registrado_por: usuario.id,
+            inicio: ahora,
+            finalizacion: ahora
+          }).select("id,resultado").single();
+        if (errorInsertarVisita) throw errorInsertarVisita;
+
+        if (detalles.length) {
+          const registros = detalles.map(d => ({ ...d, visita_id: visita.id }));
+          const { error: errorDetalles } = await cliente.from("detalles_recoleccion").insert(registros);
+          if (errorDetalles) {
+            $("msgVisita").textContent = "La visita quedó guardada, pero no se pudieron guardar los residuos: " + mostrarError(errorDetalles) + " . No intentes crear otra visita para esta parada; requiere completar los detalles pendientes.";
+            await cargarParadasRuta();
+            return;
+          }
+        }
+
+        // Traducir el resultado de la visita a un estado permitido por
+        // la restricción paradas_estado_check de Supabase.
+        const estadosPorResultado = {
+          recoleccion_efectiva: "completada",
+          sin_residuos: "completada",
+          cliente_ausente: "novedad",
+          no_atendida: "novedad",
+          cancelada: "cancelada"
+        };
+        const estadoParada = estadosPorResultado[resultado];
+        if (!estadoParada) {
+          throw new Error("El resultado de la visita no tiene un estado de parada asociado.");
+        }
+
+        const { error: errorActualizarParada } = await cliente
+          .from("paradas")
+          .update({ estado: estadoParada })
+          .eq("id", paradaId);
+
+        if (errorActualizarParada) {
+          $("msgVisita").textContent =
+            "La visita y sus residuos se guardaron, pero no se pudo actualizar el estado de la parada: " +
+            mostrarError(errorActualizarParada) +
+            ". No vuelvas a registrar la visita; actualiza la lista y revisa el estado.";
+          await cargarParadasRuta();
+          return;
+        }
+
+        $("msgVisita").textContent = "Visita guardada correctamente: " + visita.resultado + (detalles.length ? `. Se registraron ${detalles.length} tipo(s) de residuo.` : ". Sin detalles de residuos.");
+        cerrarFormularioVisita();
+        $("msgParadas").textContent = "Visita registrada correctamente. Estado de la parada: " + estadoParada + ".";
+        await cargarParadasRuta();
+      } catch (error) {
+        $("msgVisita").textContent = "No se pudo guardar la visita: " + mostrarError(error);
+      } finally {
+        boton.disabled = false;
+      }
+    });
+
     async function cargarPerfil(usuario) {
+      usuarioActual = usuario;
       $("login").classList.add("oculto");
       $("panel").classList.remove("oculto");
       ocultarRutas();
@@ -425,13 +884,12 @@
         "Perfil activo y rol coordinador confirmado. " +
         "Cargando las rutas registradas.";
 
-     $("seccionCrearRuta").classList.remove("oculto");
-$("seccionRutas").classList.remove("oculto");
-
-$("msgCrearRuta").textContent =
-  "Formulario de creación de rutas disponible.";
-
-await cargarRutas();
+      $("seccionCrearRuta").classList.remove("oculto");
+      $("seccionRutas").classList.remove("oculto");
+      $("seccionParadas").classList.remove("oculto");
+      $("msgCrearRuta").textContent = "Formulario de creación de rutas disponible.";
+      await cargarRutas();
+      await cargarOpcionesRuta();
     }
 
     $("formLogin").addEventListener("submit", async event => {
@@ -532,6 +990,7 @@ $("formCrearRuta").addEventListener("submit", async event => {
       "¡Ruta creada correctamente!\nCódigo: " + data.codigo;
 
     await cargarRutas();
+    await cargarOpcionesRuta();
 
   } catch (error) {
     mensaje.textContent =
@@ -542,6 +1001,13 @@ $("formCrearRuta").addEventListener("submit", async event => {
     boton.disabled = false;
   }
 });
+    $("btnCargarParadas").addEventListener("click", cargarParadasRuta);
+    $("seleccionRuta").addEventListener("change", cargarParadasRuta);
+    $("busquedaCliente").addEventListener("input", () => {
+      clearTimeout(temporizadorBusqueda);
+      temporizadorBusqueda = setTimeout(buscarClientes, 250);
+    });
+
     $("btnSalir").addEventListener("click", async () => {
       $("btnSalir").disabled = true;
       const { error } = await cliente.auth.signOut();
